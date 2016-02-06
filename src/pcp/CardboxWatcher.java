@@ -1,8 +1,6 @@
 package pcp;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 import java.io.IOException;
@@ -14,23 +12,17 @@ import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
-import java.util.HashMap;
-import java.util.Map;
-
 public class CardboxWatcher {
 
 	private WatchService watcher;
-    private Map<WatchKey,Path> keys;
-    private final String directoryPath;
-
+	private Path pathKey;
+	
     public CardboxWatcher(String dirPath) throws PcpException {
-    	this.directoryPath = dirPath;
     	setupWatchService();
-    	registerFolder();
+    	registerFolder(dirPath);
     }
 
     private void setupWatchService() throws PcpException {
-    	this.keys = new HashMap<WatchKey,Path>();
     	try {
     		this.watcher = FileSystems.getDefault().newWatchService();
     	} catch (IOException e) {
@@ -38,73 +30,60 @@ public class CardboxWatcher {
     	}
     }
     
-    private void registerFolder() throws PcpException { 
+    private void registerFolder(String directoryPath) throws PcpException { 
 		try {
-			Path dir = Paths.get(new URI(directoryPath));
-			register(dir);
+			pathKey = Paths.get(new URI(directoryPath));
+			WatchKey key = pathKey.register(watcher, ENTRY_CREATE);
 		} catch (URISyntaxException e) {
 			throw new PcpException("Could not find resource: " + e.getMessage());
 		} catch (IOException e) {
-			throw new PcpException("Could not register directory: " + e.getMessage());
+			throw new PcpException("Could not register directory with watcher: " + e.getMessage());
 		}
+		System.out.format("Registered folder %s\n", directoryPath);
 	}
-    
-	private void register(Path dir) throws IOException {
-        WatchKey key = dir.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
-        Path prev = keys.get(key);
-        if (prev == null) {
-            System.out.format("register: %s\n", dir);
-        } else {
-            if (!dir.equals(prev)) {
-                System.out.format("update: %s -> %s\n", prev, dir);
-            }
-        }
-        keys.put(key, dir);
-    }
- 
-	public void processEvents() {
+
+	public void processEvents() throws PcpException {
+		String lastChild = ""; // each event potentially causes 2 cycles, so don't re-process an event if it is the same child as last time
         for (;;) {
-        	
-            // wait for key to be signalled
-            WatchKey key;
+
+        	WatchKey key;
             try {
+            	// this is where we wait for the event
                 key = watcher.take();
-            } catch (InterruptedException x) {
-                return;
+            } catch (InterruptedException e) {
+                throw new PcpException("Folder watcher was interupped: " + e.getMessage());
             }
- 
-            Path dir = keys.get(key);
-            if (dir == null) {
-                System.err.println("WatchKey not recognized!!");
-                continue;
-            }
- 
+            
             for (WatchEvent<?> event: key.pollEvents()) {
                 WatchEvent.Kind kind = event.kind();
  
-                // TBD - provide example of how OVERFLOW event is handled
-                if (kind == OVERFLOW) {
-                    continue;
+                if (OVERFLOW == kind) {
+                	key.cancel();
+                	throw new PcpException("There was a Cardbox overflow. Please tidy up your cards.");
                 }
  
-                // Context for directory entry event is the file name of entry
-                WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                Path name = ev.context();
-                Path child = dir.resolve(name);
- 
-                // print out event
-                System.out.format("%s: %s\n", event.kind().name(), child);
+                if(ENTRY_CREATE == kind) {
+	                WatchEvent<Path> ev = (WatchEvent<Path>) event;
+	                Path child = pathKey.resolve(ev.context());
+
+                	if(!child.getFileName().toString().equals(lastChild)) {
+    	                System.out.format("%s: %s - processing.\n", event.kind().name(), child);
+    	                
+    	                Thread processCardThread = new Thread(new CardReader(child));
+    	                processCardThread.start();
+    	                
+    	                lastChild = child.getFileName().toString();
+                	} else {
+                		System.out.println("De-duped");
+                	}
+                }
+
             }
  
-            // reset key and remove from set if directory no longer accessible
             boolean valid = key.reset();
             if (!valid) {
-                keys.remove(key);
- 
-                // all directories are inaccessible
-                if (keys.isEmpty()) {
-                    break;
-                }
+            	key.cancel();
+                throw new PcpException("Directory not accessible");
             }
         }
     }   
