@@ -10,6 +10,66 @@ import java.awt.image.DataBufferByte;
 import javax.imageio.ImageIO;
 
 public class CardReader implements Runnable {
+
+	private static final String JPG = "image/jpeg";
+	public Path filepath;
+
+    PcpPixel[][] result;
+
+	public CardReader(Path filepath) {
+		this.filepath = filepath;
+	}
+	
+	@Override
+	public void run() {
+		String fileType;
+		try {
+			fileType = Files.probeContentType(filepath);
+			System.out.format("File type is: %s \n", fileType);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+
+		if(!JPG.equals(fileType)) {
+			System.out.println("Non-Jpg file format");
+			return;
+		}
+		
+		processFile();
+		compileCard();
+	}
+	
+	private void processFile() {
+		try {
+	        BufferedImage originalImage = ImageIO.read(filepath.toFile());
+
+	        final byte[] pixels = ((DataBufferByte) originalImage.getRaster().getDataBuffer()).getData();
+	        final int width = originalImage.getWidth();
+	        final int height = originalImage.getHeight();
+	        
+	        result = new PcpPixel[height][width];
+	        int row = 0, col = 0;
+	        for(int pixel = 0; pixel < pixels.length; pixel += 3) {
+	            int b = ((int) pixels[pixel]); // blue
+	            int g = (((int) pixels[pixel + 1])); // green
+	            int r = (((int) pixels[pixel + 2])); // red
+	            result[row][col] = new PcpPixel(r, g, b);
+	            System.out.println(result[row][col].toString());
+	            col++;
+	            if (col == width) {
+	               col = 0;
+	               row++;
+	            }
+	         }
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void compileCard() {
+		
+	}
 	
 	private class PcpPixel {
 		public int r;
@@ -23,58 +83,6 @@ public class CardReader implements Runnable {
 		public String toString() {
 			return r + ":" + g + ":" + b;
 		}
-	}
-	
-	private static final String JPG = "image/jpeg";
-	public Path filepath;
-
-	public CardReader(Path filepath) {
-		this.filepath = filepath;
-	}
-	
-	@Override
-	public void run() {
-		String fileType;
-		try {
-			fileType = Files.probeContentType(filepath);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return;
-		}
-		
-		System.out.format("File type is: %s \n", fileType);
-		
-		if(JPG.equals(fileType)) {
-			try {
-		        BufferedImage originalImage = ImageIO.read(filepath.toFile());
-
-		        final byte[] pixels = ((DataBufferByte) originalImage.getRaster().getDataBuffer()).getData();
-		        final int width = originalImage.getWidth();
-		        final int height = originalImage.getHeight();		        
-		        
-		        PcpPixel[][] result = new PcpPixel[height][width];
-		        final int pixelLength = 3;
-		         for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
-		            int argb = 0;
-		            argb += -16777216; // 255 alpha
-		            int b = ((int) pixels[pixel] & 0xff); // blue
-		            int g = (((int) pixels[pixel + 1] & 0xff) << 8); // green
-		            int r = (((int) pixels[pixel + 2] & 0xff) << 16); // red
-		            result[row][col] = new PcpPixel(r, g, b);
-		            System.out.println(result[row][col].toString());
-		            col++;
-		            if (col == width) {
-		               col = 0;
-		               row++;
-		            }
-		         }
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		} else {
-			return;
-		}
-
 	}
 	
 }
