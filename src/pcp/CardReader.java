@@ -12,9 +12,11 @@ import javax.imageio.ImageIO;
 public class CardReader implements Runnable {
 
 	private static final String JPG = "image/jpeg";
+	private static final int SCALE = 2;
 	public Path filepath;
 
-    PcpPixel[][] result;
+    private PcpPixel[][] imageArray;
+    private PcpPixel[][] finalArray;
 
 	public CardReader(Path filepath) {
 		this.filepath = filepath;
@@ -37,6 +39,7 @@ public class CardReader implements Runnable {
 		}
 		
 		processFile();
+		averageBlocks();
 		compileCard();
 	}
 	
@@ -48,14 +51,14 @@ public class CardReader implements Runnable {
 	        final int width = originalImage.getWidth();
 	        final int height = originalImage.getHeight();
 	        
-	        result = new PcpPixel[height][width];
+	        imageArray = new PcpPixel[height][width];
 	        int row = 0, col = 0;
 	        for(int pixel = 0; pixel < pixels.length; pixel += 3) {
-	            int b = ((int) pixels[pixel]); // blue
-	            int g = (((int) pixels[pixel + 1])); // green
-	            int r = (((int) pixels[pixel + 2])); // red
-	            result[row][col] = new PcpPixel(r, g, b);
-	            System.out.println(result[row][col].toString());
+	            int b = ((int) pixels[pixel] & 0xff); // blue
+	            int g = (((int) pixels[pixel + 1]) & 0xff); // green
+	            int r = (((int) pixels[pixel + 2]) & 0xff); // red
+	            imageArray[row][col] = new PcpPixel(r, g, b);
+	            //System.out.println(imageArray[row][col].toString());
 	            col++;
 	            if (col == width) {
 	               col = 0;
@@ -67,8 +70,33 @@ public class CardReader implements Runnable {
 		}
 	}
 	
+	private void averageBlocks() {
+		finalArray = new PcpPixel[imageArray.length/SCALE][imageArray[0].length/SCALE];
+		for(int x = 0; x < imageArray.length; x += SCALE) {
+			for(int y = 0; y < imageArray[0].length; y += SCALE) {
+				int aveR = 0, aveG = 0, aveB = 0;
+				for(int i = 0; i < SCALE; i++) {
+					for(int j = 0; j < SCALE; j++) {
+						aveR += imageArray[x + i][y + j].r;
+						aveG += imageArray[x + i][y + j].g;
+						aveB += imageArray[x + i][y + j].b;
+					}
+				}
+				int scaleSq = SCALE * SCALE;
+				finalArray[x/SCALE][y/SCALE] = new PcpPixel(aveR / scaleSq, aveG / scaleSq, aveB / scaleSq);
+				//System.out.println(finalArray[x/SCALE][y/SCALE].toString());
+			}
+		}
+	}
+	
 	private void compileCard() {
-		
+		System.out.println("compiling");
+		for(int x = 0; x < finalArray.length; x++) {
+			for(int y = 0; y < finalArray[0].length; y++) {
+				System.out.print(finalArray[x][y].borw());
+			}
+			System.out.println();
+		}
 	}
 	
 	private class PcpPixel {
@@ -82,6 +110,13 @@ public class CardReader implements Runnable {
 		}
 		public String toString() {
 			return r + ":" + g + ":" + b;
+		}
+		public int borw() {
+			if(((r + g + b) / 3) > 128) {
+				return 0;
+			} else {
+				return 1;
+			}
 		}
 	}
 	
