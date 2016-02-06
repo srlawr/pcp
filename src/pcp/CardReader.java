@@ -12,7 +12,17 @@ import javax.imageio.ImageIO;
 public class CardReader implements Runnable {
 	
 	private class PcpPixel {
-		
+		public int r;
+		public int g;
+		public int b;
+		public PcpPixel(int r, int g, int b) {
+			this.r=r;
+			this.g=g;
+			this.b=b;
+		}
+		public String toString() {
+			return r + ":" + g + ":" + b;
+		}
 	}
 	
 	private static final String JPG = "image/jpeg";
@@ -42,16 +52,16 @@ public class CardReader implements Runnable {
 		        final int width = originalImage.getWidth();
 		        final int height = originalImage.getHeight();		        
 		        
-		        int[][] result = new int[height][width];
+		        PcpPixel[][] result = new PcpPixel[height][width];
 		        final int pixelLength = 3;
 		         for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
 		            int argb = 0;
 		            argb += -16777216; // 255 alpha
-		            argb += ((int) pixels[pixel] & 0xff); // blue
-		            argb += (((int) pixels[pixel + 1] & 0xff) << 8); // green
-		            argb += (((int) pixels[pixel + 2] & 0xff) << 16); // red
-		            result[row][col] = argb;
-		            System.out.println(argb);
+		            int b = ((int) pixels[pixel] & 0xff); // blue
+		            int g = (((int) pixels[pixel + 1] & 0xff) << 8); // green
+		            int r = (((int) pixels[pixel + 2] & 0xff) << 16); // red
+		            result[row][col] = new PcpPixel(r, g, b);
+		            System.out.println(result[row][col].toString());
 		            col++;
 		            if (col == width) {
 		               col = 0;
