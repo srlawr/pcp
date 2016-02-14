@@ -2,20 +2,19 @@ package pcp;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-
 
 public class PcpMain {
 	
 	private static final String URI = "file:///srlawr/Java/watchfolder";
-	private static final String TESTCARD = "/src/pcp/testCard.jpg";
+	private static final String TESTCARD = "./testCard.jpg";
 
 	private static final String TEST = "test";
 	
 	public static void main(String[] args) {
 		System.out.println("running in " + args[0] + " mode");
 		if(TEST.equalsIgnoreCase(args[0])) {
-			File myFile = new File(System.getProperty("user.dir"), TESTCARD);
+			File myFile = new File(TESTCARD);
+			System.out.println(myFile.exists());
 			Path testPath = myFile.toPath();
 			System.out.println(testPath);
 			Thread processCardThread = new Thread(new CardReader(testPath));
