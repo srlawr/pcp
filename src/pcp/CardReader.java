@@ -33,7 +33,7 @@ public class CardReader implements Runnable {
 		}
 
 		if(!JPG.equals(fileType)) {
-			System.out.println("Non-Jpg file format");
+			System.out.println("Non-Jpg file format: " + fileType);
 			return;
 		}
 		
