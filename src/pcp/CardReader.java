@@ -11,7 +11,7 @@ import javax.imageio.ImageIO;
 public class CardReader implements Runnable {
 
 	private static final String JPG = "image/jpeg";
-	private static final int SCALE = 2;
+	private static final int SCALE = 3;
 	public Path filepath;
 
     private PcpPixel[][] imageArray;
@@ -24,7 +24,8 @@ public class CardReader implements Runnable {
 	@Override
 	public void run() {
 		String fileType;
-		try {
+		// commented out due to buggy file type detection in Mac
+		/*try {
 			fileType = Files.probeContentType(filepath);
 			System.out.format("File type is: %s \n", fileType);
 		} catch (IOException e) {
@@ -36,7 +37,7 @@ public class CardReader implements Runnable {
 			System.out.println("Non-Jpg file format: " + fileType);
 			return;
 		}
-		
+		*/
 		processFile();
 		averageBlocks();
 		compileCard();
