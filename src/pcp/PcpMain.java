@@ -12,6 +12,7 @@ public class PcpMain {
 	
 	public static void main(String[] args) {
 		System.out.println("running in " + args[0] + " mode");
+		System.out.println(Byte.parseByte("1110",2));
 		if(TEST.equalsIgnoreCase(args[0])) {
 			File myFile = new File(System.getProperty("user.dir"), TESTCARD);
 			System.out.println(myFile.exists());

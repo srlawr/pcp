@@ -91,12 +91,13 @@ public class CardReader implements Runnable {
 	
 	private void compileCard() {
 		System.out.println("compiling");
+		PcpCard pcpCard = new PcpCard(finalArray[0].length);
 		for(int x = 0; x < finalArray.length; x++) {
 			for(int y = 0; y < finalArray[0].length; y++) {
-				System.out.print(finalArray[x][y].borw());
+				pcpCard.setBit(x, y, finalArray[x][y].borw());
 			}
-			System.out.println();
 		}
+		System.out.println(pcpCard.toString());
 	}
 	
 	private class PcpPixel {

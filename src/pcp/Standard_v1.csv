@@ -1,0 +1,13 @@
+001, Account
+002, Contact
+003, Lead
+004, Opportunity
+
+
+
+
+# Account Fields
+001, Name
+
+# Contact Fields
+001, LastName

@@ -1,0 +1,4 @@
+001, Insert,	OBJ_TYPE,	OBJ
+002, Update,	OBJ_TYPE,	OBJ
+003, Delete,	OBJ_TYPE,	OBJ
+004, Select,	OBJ_TYPE,	OBJ
