@@ -2,6 +2,8 @@ package pcp;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.awt.image.DataBufferByte;
@@ -11,16 +13,20 @@ import javax.imageio.ImageIO;
 public class CardReader implements Runnable {
 
 	private static final String JPG = "image/jpeg";
+
+    // Number of pixels per block? Based on Scan DPI and hole size
 	private static final int SCALE = 2;
 	public Path filepath;
 
     private PcpPixel[][] imageArray;
     private PcpPixel[][] finalArray;
 
+    private CardInstruction[] instructionArray;
+
 	public CardReader(Path filepath) {
 		this.filepath = filepath;
 	}
-	
+
 	@Override
 	public void run() {
 		String fileType;
@@ -36,12 +42,13 @@ public class CardReader implements Runnable {
 			System.out.println("Non-Jpg file format");
 			return;
 		}
-		
+
 		processFile();
 		averageBlocks();
 		compileCard();
+        executeActions();
 	}
-	
+
 	private void processFile() {
 		try {
 	        BufferedImage originalImage = ImageIO.read(filepath.toFile());
@@ -49,7 +56,7 @@ public class CardReader implements Runnable {
 	        final byte[] pixels = ((DataBufferByte) originalImage.getRaster().getDataBuffer()).getData();
 	        final int width = originalImage.getWidth();
 	        final int height = originalImage.getHeight();
-	        
+
 	        imageArray = new PcpPixel[height][width];
 	        int row = 0, col = 0;
 	        for(int pixel = 0; pixel < pixels.length; pixel += 3) {
@@ -68,7 +75,7 @@ public class CardReader implements Runnable {
 			e.printStackTrace();
 		}
 	}
-	
+
 	private void averageBlocks() {
 		finalArray = new PcpPixel[imageArray.length/SCALE][imageArray[0].length/SCALE];
 		for(int x = 0; x < imageArray.length; x += SCALE) {
@@ -87,17 +94,42 @@ public class CardReader implements Runnable {
 			}
 		}
 	}
-	
+
 	private void compileCard() {
 		System.out.println("compiling");
+        instructionArray = new CardInstruction[finalArray.length];
 		for(int x = 0; x < finalArray.length; x++) {
 			for(int y = 0; y < finalArray[0].length; y++) {
 				System.out.print(finalArray[x][y].borw());
 			}
+            instructionArray[x] = new CardInstruction();
 			System.out.println();
 		}
 	}
-	
+
+    private void executeActions() {
+        for(int x = 0; x < instructionArray.length; x++) {
+            // Just doing one thing for now
+        }
+
+        System.out.println("Executing a CLI command");
+
+        try {
+            Runtime runtime = Runtime.getRuntime();
+            Process sfdxCommand = runtime.exec("sfdx force:org:list --json");
+            BufferedReader sfdxOutput = new BufferedReader(new InputStreamReader(sfdxCommand.getInputStream()));
+
+            String thisLine;
+            while ((thisLine = sfdxOutput.readLine()) != null) {
+                System.out.println(thisLine);
+            }
+
+        } catch (IOException e) {
+            System.out.println("That SFDX command went wrong");
+        }
+
+    }
+
 	private class PcpPixel {
 		public int r;
 		public int g;
@@ -118,5 +150,5 @@ public class CardReader implements Runnable {
 			}
 		}
 	}
-	
+
 }
