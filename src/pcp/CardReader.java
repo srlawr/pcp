@@ -13,9 +13,7 @@ import javax.imageio.ImageIO;
 public class CardReader implements Runnable {
 
 	private static final String JPG = "image/jpeg";
-
-    // Number of pixels per block? Based on Scan DPI and hole size
-	private static final int SCALE = 2;
+	private static final int SCALE = 3;
 	public Path filepath;
 
     private PcpPixel[][] imageArray;
@@ -30,7 +28,8 @@ public class CardReader implements Runnable {
 	@Override
 	public void run() {
 		String fileType;
-		try {
+		// commented out due to buggy file type detection in Mac
+		/*try {
 			fileType = Files.probeContentType(filepath);
 			System.out.format("File type is: %s \n", fileType);
 		} catch (IOException e) {
@@ -39,10 +38,10 @@ public class CardReader implements Runnable {
 		}
 
 		if(!JPG.equals(fileType)) {
-			System.out.println("Non-Jpg file format");
+			System.out.println("Non-Jpg file format: " + fileType);
 			return;
 		}
-
+		*/
 		processFile();
 		averageBlocks();
 		compileCard();
@@ -97,14 +96,15 @@ public class CardReader implements Runnable {
 
 	private void compileCard() {
 		System.out.println("compiling");
-        instructionArray = new CardInstruction[finalArray.length];
+        PcpCard pcpCard = new PcpCard(finalArray[0].length);
 		for(int x = 0; x < finalArray.length; x++) {
 			for(int y = 0; y < finalArray[0].length; y++) {
-				System.out.print(finalArray[x][y].borw());
+				pcpCard.setBit(x, y, finalArray[x][y].borw());
 			}
             instructionArray[x] = new CardInstruction();
 			System.out.println();
 		}
+		System.out.println(pcpCard.toString());
 	}
 
     private void executeActions() {
