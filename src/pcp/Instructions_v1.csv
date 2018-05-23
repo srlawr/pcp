@@ -1,4 +1,19 @@
-001, Insert,	OBJ_TYPE,	OBJ
-002, Update,	OBJ_TYPE,	OBJ
-003, Delete,	OBJ_TYPE,	OBJ
-004, Select,	OBJ_TYPE,	OBJ
+0,reserved
+1,force
+2,org
+3,auth
+4,config
+5,source
+6,mdapi
+7,list
+8,create
+9,open
+10,web
+11,login
+12,set
+13,push
+14,pull
+15,convert
+16,deploy
+85,TERM
+170,SFDX

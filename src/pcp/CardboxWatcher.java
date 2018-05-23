@@ -14,10 +14,13 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 public class CardboxWatcher {
 
+	private InstructionSet instructionSet;
+
 	private WatchService watcher;
 	private Path pathKey;
 	
-    public CardboxWatcher(String dirPath) throws PcpException {
+    public CardboxWatcher(String dirPath, InstructionSet instructions) throws PcpException {
+		this.instructionSet = instructions;
     	setupWatchService();
     	registerFolder(dirPath);
     }
@@ -69,7 +72,7 @@ public class CardboxWatcher {
                 	if(!child.getFileName().toString().equals(lastChild)) {
     	                System.out.format("%s: %s - processing.\n", event.kind().name(), child);
     	                
-    	                Thread processCardThread = new Thread(new CardReader(child));
+    	                Thread processCardThread = new Thread(new CardReader(child, instructionSet));
     	                processCardThread.start();
     	                
     	                lastChild = child.getFileName().toString();

@@ -6,6 +6,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.awt.image.DataBufferByte;
 
 import javax.imageio.ImageIO;
@@ -16,13 +18,16 @@ public class CardReader implements Runnable {
 	private static final int SCALE = 3;
 	public Path filepath;
 
+	private InstructionSet instructionSet;
+
     private PcpPixel[][] imageArray;
     private PcpPixel[][] finalArray;
 
-    private CardInstruction[] instructionArray;
+    private List<CardInstruction> instructionArray;
 
-	public CardReader(Path filepath) {
+	public CardReader(Path filepath, InstructionSet instructions) {
 		this.filepath = filepath;
+		this.instructionSet = instructions;
 	}
 
 	@Override
@@ -42,6 +47,8 @@ public class CardReader implements Runnable {
 			return;
 		}
 		*/
+		System.out.println("Instructions loaded: " + instructionSet);
+		instructionArray = new ArrayList<CardInstruction>();
 		processFile();
 		averageBlocks();
 		compileCard();
@@ -76,10 +83,16 @@ public class CardReader implements Runnable {
 	}
 
 	private void averageBlocks() {
+
+		System.out.println("bytes " + imageArray.length/SCALE);
 		finalArray = new PcpPixel[imageArray.length/SCALE][imageArray[0].length/SCALE];
+
 		for(int x = 0; x < imageArray.length; x += SCALE) {
+
 			for(int y = 0; y < imageArray[0].length; y += SCALE) {
+
 				int aveR = 0, aveG = 0, aveB = 0;
+
 				for(int i = 0; i < SCALE; i++) {
 					for(int j = 0; j < SCALE; j++) {
 						aveR += imageArray[x + i][y + j].r;
@@ -95,28 +108,63 @@ public class CardReader implements Runnable {
 	}
 
 	private void compileCard() {
-		System.out.println("compiling");
-        PcpCard pcpCard = new PcpCard(finalArray[0].length);
+
+		System.out.println("compiling " + finalArray.length);
+
+		PcpCard pcpCard = new PcpCard(finalArray.length);
+		
 		for(int x = 0; x < finalArray.length; x++) {
+			StringBuffer binary = new StringBuffer();
+
 			for(int y = 0; y < finalArray[0].length; y++) {
 				pcpCard.setBit(x, y, finalArray[x][y].borw());
+				binary.append(finalArray[x][y].borw());
 			}
-            instructionArray[x] = new CardInstruction();
-			System.out.println();
+
+			pcpCard.setByte(Integer.parseInt(binary.toString(), 2));
+
 		}
+
+		// @TODO NOW IS WHEN WE DEAL WITH MULTIPLE CARDS
+
+		// but for now..
+		for(int z =0; z < pcpCard.byteSize(); z++) {
+			instructionArray.add(new CardInstruction(instructionSet.getInstruction(pcpCard.getByte(z)), pcpCard.getByte(z)));
+		}
+
 		System.out.println(pcpCard.toString());
 	}
 
     private void executeActions() {
-        for(int x = 0; x < instructionArray.length; x++) {
-            // Just doing one thing for now
-        }
 
-        System.out.println("Executing a CLI command");
+		StringBuffer commandAction = new StringBuffer();
 
-        try {
+        for(int x = 0; x < instructionArray.size(); x++) {
+			System.out.println("Executing: " + instructionArray.get(x).getInstructionName());
+
+			CardInstruction thisInstruction = instructionArray.get(x);
+
+			// sfdx
+			if(thisInstruction.getCode() == 170) {
+				commandAction.append("sfdx ");
+			} else if(thisInstruction.getCode() == 85) {
+				commandAction.setLength(commandAction.length() - 1);
+				
+				System.out.println("Executing a CLI command [" + commandAction.toString() + "]");
+				executeSfdx(commandAction.toString());
+				commandAction.setLength(0);
+			} else {
+				commandAction.append(thisInstruction.getInstructionName() + ":");
+			}
+
+		}
+
+    }
+
+	private void executeSfdx(String sfdxString) {
+		try {
             Runtime runtime = Runtime.getRuntime();
-            Process sfdxCommand = runtime.exec("sfdx force:org:list --json");
+            Process sfdxCommand = runtime.exec(sfdxString);
             BufferedReader sfdxOutput = new BufferedReader(new InputStreamReader(sfdxCommand.getInputStream()));
 
             String thisLine;
@@ -127,8 +175,7 @@ public class CardReader implements Runnable {
         } catch (IOException e) {
             System.out.println("That SFDX command went wrong");
         }
-
-    }
+	}
 
 	private class PcpPixel {
 		public int r;
